@@ -1,3 +1,21 @@
+// --- Firebase Setup ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBCbfDIdSPvubiAxCKFUZfqXkidNh7qqLI",
+    authDomain: "magic-translator-cc502.firebaseapp.com",
+    projectId: "magic-translator-cc502",
+    storageBucket: "magic-translator-cc502.firebasestorage.app",
+    messagingSenderId: "721482008870",
+    appId: "1:721482008870:web:840d9a7b3fc0295a5759e7",
+    measurementId: "G-W5EXQDV0J2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const lexiconCollection = collection(db, "lexique");
+
 // --- Constants & Mappings ---
 
 const PHONEMES_IMPERATIF = [
@@ -8,8 +26,6 @@ const PHONEMES_IMPERATIF = [
     ["TT", "T"], ["TH", "T"]
 ];
 
-
-
 const FR_TO_RUNE_MAPPING = {
     'A': '𐤀', 'B': '𐤁', 'C': '𐤂', 'G': '𐤂', 'D': '𐤃',
     'E': '𐤄', 'F': '𐤈', 'V': '𐤈', 'W': '𐤈', 'U': '𐤈',
@@ -18,8 +34,6 @@ const FR_TO_RUNE_MAPPING = {
     'Q': '𐤒', 'R': '𐤓', 'S': '𐤎', 'Z': '𐤎', 'X': '𐤎',
     'T': '𐤇'
 };
-
-
 
 const RUNE_TO_FR_MAPPING = {
     '𐤀': 'A', '𐤁': 'B', '𐤂': 'G', '𐤃': 'D', '𐤄': 'E',
@@ -31,8 +45,10 @@ const RUNE_TO_FR_MAPPING = {
 
 const VOYELLES_SUPPRIMABLES = ['𐤀', '𐤄', '𐤏'];
 
-// --- Lexicon Data ---
-const LEXIQUE = [
+// --- Lexicon Data (Dynamic) ---
+let LEXIQUE = []; // Will be populated from Firebase
+
+const INITIAL_LEXIQUE = [
     { fr: "ABSORBE", rune: "𐤀𐤁𐤎𐤓𐤁" }, { fr: "ACCELERE", rune: "𐤀𐤂𐤋𐤓" },
     { fr: "ACTIVE", rune: "𐤀𐤂𐤇𐤉𐤈" }, { fr: "ADAPTE", rune: "𐤀𐤃𐤐𐤇" },
     { fr: "AIGUISE", rune: "𐤀𐤉𐤂𐤈𐤉𐤎" }, { fr: "ALIGNE", rune: "𐤀𐤋𐤉𐤂𐤍" },
@@ -101,6 +117,14 @@ const LEXIQUE = [
     { fr: "VIBRE", rune: "𐤈𐤉𐤁𐤓" }, { fr: "VOILE", rune: "𐤈𐤋" },
     { fr: "VOIS", rune: "𐤈𐤎" }, { fr: "VOLE", rune: "𐤈𐤋" }
 ];
+
+async function checkAndSeed() {
+    const q = query(lexiconCollection);
+    // Just check if empty
+    // We can't use getCountFromServer easily in v9 modular without importing it, 
+    // but we can just listen to the first snapshot.
+    // Actually, let's just use the snapshot listener we already have.
+}
 
 // --- Translation Functions ---
 
@@ -206,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lexiconContainer = document.getElementById('lexicon-container');
     const lexiconSearch = document.getElementById('lexicon-search');
 
-    function doFrTranslation() {
+    async function doFrTranslation() {
         const text = inputFr.value.trim();
         if (!text) return;
 
@@ -215,13 +239,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const translatedWords = words.map(w => {
             const rune = translateImperatif(w);
 
-            // --- Auto-Lexicon Logic ---
+            // --- Auto-Lexicon Logic (Firebase) ---
             const normalizedFr = normalizeText(w);
-            if (normalizedFr.length > 1 && rune) { // Avoid empty or single char noise
+            if (normalizedFr.length > 1 && rune) {
+                // Check if exists in local cache
                 const exists = LEXIQUE.find(item => item.fr === normalizedFr);
                 if (!exists) {
-                    LEXIQUE.push({ fr: normalizedFr, rune: rune });
-                    renderLexicon(lexiconSearch.value);
+                    // Add to Firestore
+                    addDoc(lexiconCollection, {
+                        fr: normalizedFr,
+                        rune: rune,
+                        createdAt: new Date()
+                    }).catch(err => console.error("Error adding to DB:", err));
+
+                    // Optimistic update (optional, but snapshot will handle it)
                 }
             }
             // --------------------------
@@ -270,7 +301,10 @@ document.addEventListener('DOMContentLoaded', () => {
         lexiconContainer.innerHTML = "";
         const searchTerm = filter.toUpperCase();
 
-        LEXIQUE.forEach(item => {
+        // Sort alphabetically
+        const sortedLexicon = [...LEXIQUE].sort((a, b) => a.fr.localeCompare(b.fr));
+
+        sortedLexicon.forEach(item => {
             if (item.fr.includes(searchTerm) || item.rune.includes(filter)) {
                 const div = document.createElement('div');
                 div.className = 'lexicon-item';
@@ -297,8 +331,27 @@ document.addEventListener('DOMContentLoaded', () => {
         renderLexicon(e.target.value);
     });
 
-    // Initial render
-    renderLexicon();
+    // --- Real-time Listener & Seeding ---
+    const q = query(lexiconCollection, orderBy("fr"));
+    onSnapshot(q, (snapshot) => {
+        if (snapshot.empty && INITIAL_LEXIQUE.length > 0) {
+            console.log("Database empty. Seeding...");
+            INITIAL_LEXIQUE.forEach(item => {
+                addDoc(lexiconCollection, {
+                    ...item,
+                    createdAt: new Date()
+                }).catch(e => console.error("Seed error", e));
+            });
+            return; // Snapshot will fire again after adds
+        }
+
+        LEXIQUE = [];
+        snapshot.forEach((doc) => {
+            LEXIQUE.push(doc.data());
+        });
+        renderLexicon(lexiconSearch.value);
+        console.log("Lexicon updated from DB:", LEXIQUE.length, "words");
+    });
 });
 
 function copyToClipboard(elementId) {
