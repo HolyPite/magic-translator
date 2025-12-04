@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traducteur Runique</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+Phoenician&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Traducteur Runique</h1>
+            <p class="subtitle">Système Magique Primitif</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="fr-to-runic">
+                <span class="icon">✦</span> Traduction
+            </button>
+            <button class="tab-btn" data-tab="lexicon">
+                <span class="icon">📖</span> Lexique
+            </button>
+            <button class="tab-btn" data-tab="runic-to-fr">
+                <span class="icon">👁️</span> Déchiffrage
+            </button>
+        </nav>
+
+        <main>
+            <!-- TAB: FR TO RUNIC -->
+            <div class="tab-content active" id="fr-to-runic">
+                <div class="input-group">
+                    <textarea id="input-fr" placeholder="Entrez votre texte ici..."></textarea>
+                </div>
+
+                <div class="action-area">
+                    <button id="btn-translate-fr" class="action-btn">
+                        <span class="btn-text">Inscrire la Rune</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </div>
+
+                <div class="output-group">
+                    <div class="output-header">
+                        <label>Résultat</label>
+                        <button class="copy-btn" onclick="copyToClipboard('output-rune')" title="Copier">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="rune-display" id="output-rune"></div>
+                </div>
+            </div>
+
+            <!-- TAB: LEXICON -->
+            <div class="tab-content" id="lexicon">
+                <div class="search-bar">
+                    <input type="text" id="lexicon-search" placeholder="Rechercher un mot de pouvoir...">
+                </div>
+                <div class="lexicon-list" id="lexicon-container">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- TAB: RUNIC TO FR -->
+            <div class="tab-content" id="runic-to-fr">
+                <div class="input-group">
+                    <label for="input-rune">Texte Runique</label>
+                    <textarea id="input-rune" placeholder="Entrez des runes (ex: 𐤂𐤌𐤐𐤓𐤎)..."></textarea>
+                </div>
+
+                <div class="action-area">
+                    <button id="btn-translate-rune" class="action-btn">
+                        <span class="btn-text">Déchiffrer</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </div>
+
+                <div class="output-group">
+                    <div class="output-header">
+                        <label>Transcription</label>
+                        <button class="copy-btn" onclick="copyToClipboard('output-fr')" title="Copier">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="text-display" id="output-fr"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js?v=2"></script>
+</body>
+
+</html>
